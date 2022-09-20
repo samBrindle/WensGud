@@ -213,4 +213,66 @@ async def on_member_join(member):
         f'\"!optin\" command in the scheduling text channel'
     )
 
+# **************************
+# ****** BOT ALGORITHM *****
+# **************************
+
+def create_event(ctx, members):
+    # event = {
+    #   'guild' : ctx.guild,
+    #   'name' : ctx.name,
+    #   'description' : ctx.description,
+    #   'start' : 0,
+    #   'end' : 0,
+    # }
+    _members = []
+
+    for member in members: ## TODO: USE SQL SEARCH TO GET GUILD MEMBERS IN BOT
+        if member.guild == ctx.guild:
+        _members.append(member)
+
+    if not _members:
+        return 'No active members'
+
+    hours = _members[0].hours
+
+    for i in range(1, len(_members)):
+        for j, hour in enumerate(hours):
+            if _members[i].hours[j][0] is None:
+                hours[j] = [None]
+                continue
+            if hour[0] is None:
+                continue
+            if _members[i].hours[j][1] < hour[0]:
+                hours[j] = [None]
+            if _members[i].hours[j][0] > hour[1]:
+                hours[j] = [None]
+            if _members[i].hours[j][0] > hour[0]:
+                hour[0] = _members[i].hours[j][0]
+            if _members[i].hours[j][1] < hour[1]:
+                hour[1] = members[i].hours[j][1]
+
+    week = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    for i, hour in enumerate(hours):
+        if hour[0] is None:
+            continue
+        start = hour[0] % 100
+        end = hour[1] % 100
+        if (start + end) < 60:
+            if hour[1] - hour[0] >= ctx.length:
+                return f'{week[i]} from {hour[0]} to {hour[0] + ctx.length}'
+            if hour[1] - hour[0] < ctx.length:
+                continue
+        if start > end:
+            actual_time = (hour[1] - end) - (hour[0] - start) - (40+(start-end))
+            if actual_time >= ctx.length:
+                return f'{week[i]} from {hour[0]} to {hour[0] + ctx.length}'
+        if start <= end:
+            actual_time = (hour[1] - end) - (hour[0] - start) + ((end-start))
+            if actual_time >= ctx.length:
+                return f'{week[i]} from {hour[0]} to {hour[0] + ctx.length}'
+
+
+    return 'No times found'
+
 bot.run(TOKEN)
