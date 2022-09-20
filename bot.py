@@ -13,7 +13,8 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 time_regex = r"([0|1]\d:[0-5]\d)|(2[0-3]:[0-5]\d)"
 
-members = []
+members = {}
+events = {}
 
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
@@ -75,7 +76,7 @@ async def opt_in(ctx):
     else:
         response = f'{ctx.author.name} has signed up for events!'
 
-    members.append(ctx.author.name)
+    members[ctx.author.name] = []
     print(members)
 
     await ctx.send(response)
@@ -114,6 +115,9 @@ async def enter_availability(message):
                                        f'if you want to change this redo your !availability command!')
             user_availability.append("None")
 
+    members[message.author.name] = user_availability
+    print(members)
+
     await message.channel.send(user_availability)
 
 
@@ -122,21 +126,69 @@ def helper_check(message):
     return re.findall(time_regex, message)
 
 
-@bot.command(name='create', help='This command allows a user to create a new event. Inlcude Event name, start_time, end_time, and description')
+@bot.command(name='create', help='This command allows a user to create a new event.')
 async def create_event(ctx):
     await ctx.channel.send(f'Please enter your event name ->')
     name = await bot.wait_for('message')
-    await ctx.channel.send(f'Please enter a description for your event ->')
-    description = await bot.wait_for('message')
-    await ctx.channel.send(f'Please enter your event start time ->')
-    start_time = await bot.wait_for('message')
-    await ctx.channel.send(f'Please enter your event start time ->')
-    end_time = await bot.wait_for('message')
+    # await ctx.channel.send(f'Please enter a description for your event ->')
+    # description = await bot.wait_for('message')
+    # await ctx.channel.send(f'Please enter your event duration (2:40 would be 2 hours and 40 minutes ->')
+    # duration = await bot.wait_for('message')
 
-    print([name.content, description.content, start_time.content, end_time.content])
+    # await ctx.channel.send(f'Please enter your event start time ->')
+    # start_time = await bot.wait_for('message')
+    # await ctx.channel.send(f'Please enter your event end time ->')
+    # end_time = await bot.wait_for('message')
+
+    events[name.content] = {}
+    # print([ctx.author.name, name.content, description.content, duration])
+    print(events)
 
 # await create_scheduled_event(*, name, start_time, entity_type=..., privacy_level=..., channel=..., location=...,
 #                              end_time=..., description=..., image=..., reason=None)¶
+
+
+@bot.command(name='cancel', help='This command allows a user to cancel an event. Inlcude event name.')
+async def cancel_event(ctx):
+    input_list = ctx.message.content.split()
+    event_name = " ".join(input_list[1:])
+
+    if event_name in events:
+        del events[event_name]
+        print(events)
+        await ctx.channel.send(f'You have cancelled the {event_name} event.')
+    else:
+        await ctx.channel.send(f'Sorry, {event_name} is not a valid event in our logs.')
+
+
+@bot.command(name='join', help='This command allows a user to join an event. Include event name.')
+async def join_event(ctx):
+    input_list = ctx.message.content.split()
+    event_name = ' '.join(input_list[1:])
+    if event_name in events:
+        events[event_name][ctx.author.name] = members[ctx.author.name]
+        # target_event = events[event_name]
+        # target_event[ctx.author.name] = members[ctx.author.name]
+        print(events)
+        await ctx.channel.send(f'{ctx.author.name} has joined {event_name}')
+    else:
+        await ctx.channel.send(f'Sorry, {event_name} is not a valid event in our logs.')
+
+
+@bot.command(name='leave', help='This command allows a user to leave an event. Include event name.')
+async def leave_event(ctx):
+    input_list = ctx.message.content.split()
+    event_name = ' '.join(input_list[1:])
+    if events[event_name]:
+        if ctx.author.name in events[event_name]:
+            events[event_name].pop(ctx.author.name)
+            await ctx.channel.send(f'{ctx.author.name} has left {event_name}')
+    else:
+        await ctx.channel.send(f'Sorry, {event_name} is not a valid event in our logs.')
+
+    print(events)
+
+
 
 
 @bot.command(name='hello', help='Please help me :(')
@@ -158,7 +210,7 @@ async def on_member_join(member):
     await member.dm_channel.send(
         f'Hi {member.name}, welcome to our server!'
         f'If you would like to be a part of the server scheduling, please enter the'
-        f'\"!signup\" command in the scheduling text channel'
+        f'\"!optin\" command in the scheduling text channel'
     )
 
 bot.run(TOKEN)
