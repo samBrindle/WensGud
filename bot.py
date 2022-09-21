@@ -12,7 +12,7 @@ load_dotenv()
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
-time_regex = r"([0|1]\d[0-5]\d|2[0-3][0-5]\d)"
+time_regex = r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday): *(?:(?:([0|1]\d[0-5]\d|2[0-3][0-5]\d) *(?:-|,) *([0|1]\d[0-5]\d|2[0-3][0-5]\d))|(None))"
 
 members = {}
 events = {}
@@ -77,7 +77,7 @@ async def opt_in(ctx):
     else:
         response = f'{ctx.author.name} has signed up for events!'
 
-    members[ctx.author] = Member(ctx.author.name, [])
+    members[ctx.author] = Member(ctx.author.name)
 
     print(members)
 
@@ -96,61 +96,55 @@ async def opt_out(ctx):
     await ctx.send(response)
 
 
-# ***** FIX ISSUE OF TIME STARTING WITH 0 OR 2 ***********
+
 @bot.command(name='availability', help='This command allows you to enter in your typical availability')
 async def enter_availability(message):
     days_of_week = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
-    user_availability = []
-    await message.channel.send(f'For each days availability, please enter your available time range in a 24 hour format '
-                               f'(Ex. 1545, 2330) or None if not available')
+    user_availability = members[message.author].availability
 
-    for day in days_of_week:
-        sleep(1)
-        await message.channel.send(f'Enter your availability on {day} ->')
-        msg = await bot.wait_for('message')
-        split_message = helper_check(msg.content)
+    await message.channel.send(f'We hear you want to change your availability. Please enter the days you would like '
+                               f'to change your availability on followed by the times you are available (ex. Tuesday: 1000, 1400)')
 
-        if len(split_message) == 2:
-            fixed_message = [int(split_message[0]), int(split_message[1])]
-            user_availability.append(fixed_message)
-        elif msg.content == "None":
-            user_availability.append([None])
-        else:
-            await message.channel.send(f'Invalid Input! Your availability for {day} is now None '
-                                       f'if you want to change this redo your !availability command!')
-            user_availability.append([None])
+    days = await bot.wait_for('message')
+    user_input = helper_check(days.content)
+
+    for input_day in user_input:
+        for i, day in enumerate(days_of_week):
+            if input_day[0].lower() == day:
+                if input_day[1] != '':
+                    user_availability[i] = [int(input_day[1]), int(input_day[2])]
+                else:
+                    user_availability[i] = [None]
+
 
     members[message.author].availability = user_availability
-    print(members[message.author].availability)
-
-    await message.channel.send(user_availability)
 
 
 def helper_check(message):
     return re.findall(time_regex, message)
 
 
-@bot.command(name='create', help='This command allows a user to create a new event.')
+@bot.command(name='create', help='This command allows a user to create a new event. Please enter an event name.')
 async def create_event(ctx):
-    await ctx.channel.send(f'Please enter your event name ->')
-    name = await bot.wait_for('message')
+    input_list = ctx.message.content.split()
+    name = ' '.join(input_list[1:])
     await ctx.channel.send(f'Please enter a description for your event ->')
     description = await bot.wait_for('message')
     await ctx.channel.send(f'Please enter your event duration (2:40 would be 2 hours and 40 minutes ->')
     duration = await bot.wait_for('message')
 
-    events[name.content] = Event(name.content, description.content, int(duration.content))
+    events[name] = Event(name, description.content, int(duration.content))
 
     print(events)
 
-    create_event_algorithm(events[name.content], members)
+    create_event_algorithm(events[name], members)
 
     for key in members.keys():
         await key.create_dm()
         await key.dm_channel.send(
-            f'Hey {members[key].name} you have been added to {events[name.content].name}! '
-            f'This event will be happening on {events[name.content].day}, starting at {events[name.content].start_time}'
-            f' and ending at {events[name.content].end_time}. Don\'t be late!'
+            f'Hey {members[key].name} you have been added to {events[name].name}! '
+            f'This event will be happening on {events[name].day}, starting at {events[name].start_time}'
+            f' and ending at {events[name].end_time}. Don\'t be late!'
         )
 
 
@@ -237,9 +231,9 @@ async def on_member_join(member):
 
 
 class Member:
-    def __init__(self, name, availability=[], guild=1020450611826806875):
+    def __init__(self, name, guild=1020450611826806875):
         self.name = name
-        self.availability = availability
+        self.availability = [[None], [None], [None], [None], [None], [None], [None]]
         self.guild = guild
 
 
