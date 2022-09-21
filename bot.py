@@ -2,6 +2,7 @@ import os
 import random
 import re
 from time import sleep
+import datetime
 
 from dotenv import load_dotenv
 from discord.ext import commands
@@ -11,7 +12,7 @@ load_dotenv()
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
-time_regex = r"([0|1]\d[0-5]\d)|(2[0-3][0-5]\d)"
+time_regex = r"([0|1]\d[0-5]\d|2[0-3][0-5]\d)"
 
 members = {}
 events = {}
@@ -76,7 +77,8 @@ async def opt_in(ctx):
     else:
         response = f'{ctx.author.name} has signed up for events!'
 
-    members[ctx.author.name] = Member(ctx.author.name, [])
+    members[ctx.author] = Member(ctx.author.name, [])
+
     print(members)
 
     await ctx.send(response)
@@ -89,9 +91,10 @@ async def opt_out(ctx):
     else:
         response = f'{ctx.author.name} has decided to opt out for events!'
 
-    members.pop(ctx.author.name)
+    members.pop(ctx.author)
     print(members)
     await ctx.send(response)
+
 
 # ***** FIX ISSUE OF TIME STARTING WITH 0 OR 2 ***********
 @bot.command(name='availability', help='This command allows you to enter in your typical availability')
@@ -108,25 +111,22 @@ async def enter_availability(message):
         split_message = helper_check(msg.content)
 
         if len(split_message) == 2:
-            fixed_message = [int(split_message[0][0]), int(split_message[1][0])]
+            fixed_message = [int(split_message[0]), int(split_message[1])]
             user_availability.append(fixed_message)
         elif msg.content == "None":
             user_availability.append([None])
         else:
-            # let user know invalid input and give them "None" in place
-            # let them know they need to redo if they don't want None
             await message.channel.send(f'Invalid Input! Your availability for {day} is now None '
                                        f'if you want to change this redo your !availability command!')
             user_availability.append([None])
 
-    members[message.author.name].availability = user_availability
-    print(members[message.author.name].availability)
+    members[message.author].availability = user_availability
+    print(members[message.author].availability)
 
     await message.channel.send(user_availability)
 
 
 def helper_check(message):
-    # 00:00
     return re.findall(time_regex, message)
 
 
@@ -140,10 +140,19 @@ async def create_event(ctx):
     duration = await bot.wait_for('message')
 
     events[name.content] = Event(name.content, description.content, int(duration.content))
-    # print([ctx.author.name, name.content, description.content, duration])
+
     print(events)
 
-    print(create_event_algorithm(events[name.content], members))
+    create_event_algorithm(events[name.content], members)
+
+    for key in members.keys():
+        await key.create_dm()
+        await key.dm_channel.send(
+            f'Hey {members[key].name} you have been added to {events[name.content].name}! '
+            f'This event will be happening on {events[name.content].day}, starting at {events[name.content].start_time}'
+            f' and ending at {events[name.content].end_time}. Don\'t be late!'
+        )
+
 
 # await create_scheduled_event(*, name, start_time, entity_type=..., privacy_level=..., channel=..., location=...,
 #                              end_time=..., description=..., image=..., reason=None)¶
@@ -167,9 +176,7 @@ async def join_event(ctx):
     input_list = ctx.message.content.split()
     event_name = ' '.join(input_list[1:])
     if event_name in events:
-        events[event_name][ctx.author.name] = members[ctx.author.name]
-        # target_event = events[event_name]
-        # target_event[ctx.author.name] = members[ctx.author.name]
+        events[event_name][ctx.author] = members[ctx.author]
         print(events)
         await ctx.channel.send(f'{ctx.author.name} has joined {event_name}')
     else:
@@ -190,8 +197,6 @@ async def leave_event(ctx):
     print(events)
 
 
-
-
 @bot.command(name='hello', help='Please help me :(')
 async def hello(ctx):
     greetings = [
@@ -204,9 +209,9 @@ async def hello(ctx):
     await ctx.send(response)
 
 
-
 @bot.event
 async def on_member_join(member):
+    print(member)
     await member.create_dm()
     await member.dm_channel.send(
         f'Hi {member.name}, welcome to our server!'
@@ -244,6 +249,9 @@ class Event:
         self.description = description
         self.duration = duration
         self.guild = guild
+        self.start_time = None
+        self.end_time = None
+        self.day = None
 
 
 def create_event_algorithm(ctx, members):
@@ -292,18 +300,29 @@ def create_event_algorithm(ctx, members):
         end = hour[1] % 100
         if (start + end) < 60:
             if hour[1] - hour[0] >= ctx.duration:
-                return f'{week[i]} from {hour[0]} to {hour[0] + ctx.duration}'
+                # return f'{week[i]} from {hour[0]} to {hour[0] + ctx.duration}'
+                ctx.start_time = hour[0]
+                ctx.end_time = hour[0] + ctx.duration
+                ctx.day = week[i]
+                return
             if hour[1] - hour[0] < ctx.duration:
                 continue
         if start > end:
             actual_time = (hour[1] - end) - (hour[0] - start) - (40+(start-end))
             if actual_time >= ctx.duration:
-                return f'{week[i]} from {hour[0]} to {hour[0] + ctx.duration}'
+                # return f'{week[i]} from {hour[0]} to {hour[0] + ctx.duration}'
+                ctx.start_time = hour[0]
+                ctx.end_time = hour[0] + ctx.duration
+                ctx.day = week[i]
+                return
         if start <= end:
             actual_time = (hour[1] - end) - (hour[0] - start) + (end-start)
             if actual_time >= ctx.duration:
-                return f'{week[i]} from {hour[0]} to {hour[0] + ctx.duration}'
-
+                # return f'{week[i]} from {hour[0]} to {hour[0] + ctx.duration}'
+                ctx.start_time = hour[0]
+                ctx.end_time = hour[0] + ctx.duration
+                ctx.day = week[i]
+                return
     return 'No times found'
 
 
