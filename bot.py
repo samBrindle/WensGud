@@ -12,8 +12,7 @@ load_dotenv()
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
-time_regex = r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday): *(?:(?:([0|1]\d[0-5]\d|2[0-3][0-5]\d) " \
-             r"*(?:-|,) *([0|1]\d[0-5]\d|2[0-3][0-5]\d))|(None))"
+time_regex = r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday): *(?:(?:([0|1]\d[0-5]\d|2[0-3][0-5]\d) *(?:-|,) *([0|1]\d[0-5]\d|2[0-3][0-5]\d))|(None))"
 
 members = {}
 events = {}
