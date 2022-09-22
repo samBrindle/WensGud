@@ -1,4 +1,4 @@
-#!/Users/sambrindle/Documents/codeFellows/401-python/wensgud/.venv/bin/python3
+#!/home/lovi/projects/401/labs/final/WensGud/.venv/bin/python3.10
 # -*- coding: utf-8 -*-
 import re
 import sys
