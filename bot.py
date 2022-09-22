@@ -11,7 +11,6 @@ import discord
 load_dotenv()
 
 TOKEN = os.getenv('DISCORD_TOKEN')
-GUILD = os.getenv('DISCORD_GUILD')
 time_regex = r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday): *(?:(?:([0|1]\d[0-5]\d|2[0-3][0-5]\d) *(?:-|,) *([0|1]\d[0-5]\d|2[0-3][0-5]\d))|(None))"
 
 members = {}
@@ -28,9 +27,9 @@ bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
 
-    for guild in bot.guilds:
-        if guild == GUILD:
-            break
+    # for guild in bot.guilds:
+    #     if guild == GUILD:
+    #         break
 
     for member in guild.members:
         print(member)
