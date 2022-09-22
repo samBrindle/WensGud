@@ -61,9 +61,7 @@ async def opt_in(ctx):
     else:
         response = f'{ctx.author.name} has signed up for events!'
 
-    members[ctx.author] = Member(ctx.author.name)
-
-    print(members)
+    members[ctx.author] = Member(ctx.author.name, ctx.guild.id)
 
     await ctx.send(response)
 
@@ -76,7 +74,7 @@ async def opt_out(ctx):
         response = f'{ctx.author.name} has decided to opt out for events!'
 
     members.pop(ctx.author)
-    print(members)
+
     await ctx.send(response)
 
 
@@ -137,9 +135,7 @@ async def create_event(ctx):
     await ctx.channel.send(f'Please enter your event duration (240 would be 2 hours and 40 minutes ->')
     duration = await bot.wait_for('message')
 
-    events[name] = Event(name, description.content, int(duration.content))
-
-    print(events)
+    events[name] = Event(name, description.content, int(duration.content), ctx.guild.id)
 
     create_event_algorithm(events[name], members)
 
@@ -168,7 +164,6 @@ async def cancel_event(ctx):
 
     if event_name in events:
         del events[event_name]
-        print(events)
         await ctx.channel.send(f'You have cancelled the {event_name} event.')
     else:
         await ctx.channel.send(f'Sorry, {event_name} is not a valid event in our logs.')
@@ -229,14 +224,14 @@ async def check_event(ctx):
 
 
 class Member:
-    def __init__(self, name, guild=1020450611826806875):
+    def __init__(self, name, guild):
         self.name = name
         self.availability = [[None], [None], [None], [None], [None], [None], [None]]
         self.guild = guild
 
 
 class Event:
-    def __init__(self, name, description, duration, guild=1020450611826806875):
+    def __init__(self, name, description, duration, guild):
         self.name = name
         self.description = description
         self.duration = duration
